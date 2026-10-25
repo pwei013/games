@@ -2,6 +2,8 @@
 
 ## Dependency-free tests
 
+Run the commands below from the `stellar-courier/` game directory. From the multi-game repository root, use `node --test stellar-courier/tests/*.test.js`; for browser QA, either serve that directory explicitly or visit `/stellar-courier/tests/browser-harness.html` when serving the repository root. The game and its internal relative paths remain self-contained.
+
 ```sh
 node --test tests/*.test.js
 ```
