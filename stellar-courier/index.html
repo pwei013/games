@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#080e1c">
+  <meta name="description" content="星际快递：一款免费、离线、零依赖的太空街机小游戏。收集货箱，躲开陨石，让好东西抵达远方。">
+  <title>星际快递：银河远征 · Stellar Courier</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='25' fill='%23080e1c'/%3E%3Cpath d='M25 74 50 17 75 74 50 61Z' fill='%2387f4d6'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="masthead">
+      <a class="brand" href="./index.html" aria-label="星际快递首页">
+        <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 30 30"><path d="m7 23 8-18 8 18-8-4Z"/><path d="M15 23v4"/></svg></span>
+        <span>STELLAR<span class="brand-light"> / COURIER</span></span>
+      </a>
+      <div class="header-right"><span class="online-dot"></span><span>银河运输局</span><span class="edition">VOL. 04</span></div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="game-title">
+        <div><p class="eyebrow">SMALL SHIP. BIG DELIVERIES.</p><h1 id="game-title">星际快递<span class="title-star" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 1 3.2 7.8L23 12l-7.8 3.2L12 23l-3.2-7.8L1 12l7.8-3.2Z"/></svg></span></h1><p class="subtitle">十段星途，无尽挑战。跟着旋律，向银河深处出发。</p></div>
+        <div class="record"><span class="record-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m16 4 3.7 7.5 8.3 1.2-6 5.9 1.4 8.3-7.4-3.9-7.4 3.9 1.4-8.3-6-5.9 8.3-1.2Z"/></svg></span><div><span class="label" id="record-label">全程通关纪录</span><strong id="best-score">0000</strong></div><span class="record-unit">分</span></div>
+      </section>
+
+      <div class="game-layout">
+        <section class="arena-card" aria-label="星际快递游戏区域">
+          <div class="arena-topbar"><div class="sector"><span class="live-dot"></span><span id="sector-name">第 1 站 <span class="slash">/</span> 启航港</span></div><div class="toolbar"><button id="sound-button" class="sound-control" type="button" aria-label="关闭音效" aria-pressed="true" title="音效默认开启，点击开始或试听激活（M）"><svg id="sound-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m11 5-5 4H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-off" d="m16 9 5 6m0-6-5 6"/></svg><span id="sound-label">音效开</span></button><button id="music-button" class="sound-control" type="button" aria-pressed="true" aria-label="关闭背景音乐"><span id="music-label">音乐开</span></button><button id="audio-settings-button" class="test-sound" type="button" aria-expanded="false" aria-controls="audio-settings">音量</button><button id="pause-button" class="icon-button" type="button" aria-label="暂停游戏" title="暂停（P / Esc）" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button></div><div id="audio-settings" class="audio-settings" hidden><label>音效音量 <input id="effects-volume" type="range" min="0" max="1" step="0.01" value="0.75"><output id="effects-volume-value">75%</output></label><label>音乐音量 <input id="music-volume" type="range" min="0" max="1" step="0.01" value="0.42"><output id="music-volume-value">42%</output></label><div><button id="test-sound-button" class="test-sound" type="button">试听音效</button><span>暂停时音乐也会暂停</span></div></div></div>
+          <div class="stage" id="stage">
+            <canvas id="game-canvas" tabindex="0" role="img" aria-label="太空航道。用方向键或 WASD 移动，收集黄色货箱并送至绿色空间站；空格跃迁，P 暂停。"></canvas>
+            <div class="hud" aria-hidden="true"><div><span class="label">本趟收入</span><strong id="score">0000</strong></div><div class="hud-center"><span class="label" id="time-label">本关航时</span><strong id="time">01:00</strong></div><div class="hud-health"><span class="label">飞船护盾</span><div id="health" class="hearts"></div></div></div>
+            <div class="run-banner" id="run-banner" aria-hidden="true"><div class="level-goal"><span id="level-label">1 / 10 · 启航港</span><strong id="level-goal">送达 0 / 4 箱</strong><strong id="smash-goal" hidden></strong><span class="level-track"><i id="level-fill"></i></span></div><div class="combo-meter" id="combo-meter"><strong id="combo-label">连单待命</strong><span id="combo-clock">12 秒内再送一单可加倍</span><span class="combo-track"><i id="combo-fill"></i></span></div></div>
+            <div id="run-badge" class="run-badge">正式全程 · 均衡舱</div>
+            <div id="power-status" class="power-status" aria-live="off"></div>
+            <div id="toast" class="toast" role="status" aria-live="polite"></div>
+            <div class="overlay" id="overlay">
+              <div class="overlay-card" id="overlay-card">
+                <div class="mission-emblem" aria-hidden="true"><span class="orbit-ring"></span><svg viewBox="0 0 80 80"><path d="M29 52c-4 0-9 2-11 10 8-2 10-7 10-11M31 42l-12-1 7-12 13-2M39 51l1 12 12-7 2-13"/><path class="rocket-body" d="M27 45c7-17 18-29 37-30 0 19-12 30-29 37Z"/><circle cx="48" cy="31" r="6"/><path d="m24 55-8 8"/></svg><span class="emblem-star star-a"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 1 3.2 7.8L23 12l-7.8 3.2L12 23l-3.2-7.8L1 12l7.8-3.2Z"/></svg></span><span class="emblem-star star-b">·</span></div>
+                <p class="eyebrow" id="overlay-kicker">READY FOR TAKEOFF</p>
+                <h2 id="overlay-title">银河远征，现在启航。</h2>
+                <p id="overlay-description">十关逐步解锁雷区、航门、风带与风暴。<br>跟着原创太空旋律，送出你的银河纪录。</p>
+                <div class="result-stats" id="result-stats" hidden><div><span>本趟收入</span><strong id="result-score">0</strong></div><div><span>成功送达</span><strong id="result-deliveries">0</strong></div></div>
+                <p id="result-detail" class="result-detail" hidden></p>
+                <div class="mode-picker" id="mode-picker" role="group" aria-label="游戏模式"><button id="mode-campaign" data-mode="campaign" type="button" aria-pressed="true">十关闯关</button><button id="mode-endless" data-mode="endless" type="button" aria-pressed="false">无尽挑战</button></div>
+                <button class="primary-button retry-button" id="retry-button" type="button" hidden>重试本关</button>
+                <button class="primary-button" id="start-button" type="button"><span id="start-label">开始接单</span><span class="arrow-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></span></button>
+                <button class="text-button" id="restart-button" type="button" hidden>从第一关重新挑战</button><button class="text-button" id="menu-button" type="button" hidden>返回菜单</button>
+                <details id="practice-panel" class="practice-panel"><summary id="practice-summary">关卡练习 · 已解锁 1 / 10</summary><div><select id="practice-level" aria-label="选择已解锁关卡"><option value="1">1 · 启航港</option></select><button id="practice-button" type="button">进入练习</button></div><small>独立练习不写入全程通关纪录</small></details>
+                <p class="start-hint" id="start-hint">方向键 / WASD 移动 · 空格冲刺 · Enter 出发</p>
+              </div>
+            </div>
+            <div class="overlay flow-overlay" id="flow-overlay" hidden>
+              <div class="flow-card">
+                <p class="eyebrow" id="flow-kicker">PIT STOP</p><h2 id="flow-title">本关完成，选择改装</h2><p id="flow-description"></p>
+                <div id="upgrade-options" class="upgrade-options"></div>
+                <div id="tutorial-panel" hidden><canvas id="tutorial-canvas" width="320" height="120" tabindex="0" aria-label="不扣时的冲刺练习，方向键移动，空格击碎练习石"></canvas><p id="tutorial-status">空格冲刺，击碎右侧练习石</p><button id="tutorial-boost" class="primary-button" type="button">试一次冲刺 · Space</button><button id="tutorial-finish" class="primary-button" type="button" hidden>练习完成，开始本关</button><button id="tutorial-skip" class="text-button" type="button">跳过练习，直接开始</button></div>
+                <button id="flow-menu" class="text-button" type="button">返回菜单</button>
+              </div>
+            </div>
+            <div class="stage-caption" id="stage-caption"><span class="caption-line"></span><span id="flight-tip">跟随货箱路线，送达绿色投递站</span><span class="coordinates">N 07° · E 042°</span></div>
+          </div>
+          <div class="arena-footer"><span><span class="legend-dot cargo-dot"></span>货箱</span><span><span class="legend-dot station-dot"></span>投递站</span><span><span class="legend-dot asteroid-dot"></span>陨石</span><span class="footer-note">每一份期待，都值得抵达。</span></div>
+        </section>
+
+        <aside class="mission-panel" aria-label="任务信息和操作说明">
+          <div class="mission-heading"><span class="eyebrow">YOUR MISSION</span><span class="tiny-star" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 1 3.2 7.8L23 12l-7.8 3.2L12 23l-3.2-7.8L1 12l7.8-3.2Z"/></svg></span></div>
+          <h2>冲刺送达。<br>连单翻倍。</h2>
+          <p class="mission-copy">12 秒内再次投递，最高 3 倍奖励。<br>空格冲刺，无敌且能撞碎陨石。</p>
+          <div class="cargo-section"><div class="section-label"><span>货舱状态</span><span><b id="cargo-count">0</b> / <span id="cargo-capacity">5</span></span></div><div id="cargo-slots" class="cargo-slots" aria-label="货舱 0 / 5"><span></span><span></span><span></span><span></span><span></span></div><div class="cargo-value"><span id="cargo-caption">等你装满期待</span><strong id="cargo-value">+0</strong></div></div>
+          <div class="bonus-note"><span class="arrow-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></span><p><strong id="mission-target">第一站目标：累计送达 4 箱</strong><br><span id="mission-reward">过关奖励 250 分，并恢复 1 格护盾。</span></p></div>
+          <button id="boost-button" class="boost-button" type="button" disabled aria-label="跃迁冲刺，冷却 2.4 秒"><span class="boost-icon" aria-hidden="true"><svg viewBox="0 0 24 32"><path d="m14 2-11 17h8L9 30l12-18h-8Z"/></svg></span><span><strong id="boost-title">跃迁冲刺</strong><small id="boost-description">撞碎陨石 +40 · 每 2.4 秒一次</small></span><kbd>SPACE</kbd><span id="boost-fill" class="boost-fill"></span></button>
+          <div class="power-guide"><span class="magnet-color">磁吸 8s</span><span class="shield-color">护盾 6s</span><span class="slow-color">时缓 6s</span></div>
+          <div class="controls-guide"><h3>飞行员手册</h3><div><span class="key-cluster"><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></span><span>或 WASD 移动</span></div><div><span><kbd>P</kbd> <kbd>ESC</kbd></span><span>暂停 / 继续</span></div><p class="touch-hint">触屏：拖动航道控制飞船，点击按钮跃迁</p></div>
+          <div class="panel-bottom"><span class="planet-mini" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><ellipse cx="12" cy="12" rx="11" ry="3.5" transform="rotate(-30 12 12)"/></svg></span><span>一人，一船，一整个宇宙。</span></div>
+        </aside>
+      </div>
+      <footer class="page-footer"><span>为每一次小小的出发。</span><span>离线可玩 <span>·</span> 无广告 <span>·</span> 零依赖</span></footer>
+      <p id="audio-status" class="sr-only" role="status" aria-live="polite"></p>
+      <p id="screen-reader-status" class="sr-only" role="status" aria-live="polite"></p>
+      <noscript><p class="noscript">请开启浏览器的 JavaScript，才能开始星际旅程。</p></noscript>
+    </main>
+  </div>
+  <script src="core.js"></script>
+  <script src="audio.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
