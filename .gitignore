@@ -1,7 +1,11 @@
+# Common OS/editor files
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
+# Dependencies and generated caches across independent games
 node_modules/
 __pycache__/
 *.pyc
-artifacts/
 .playwright/
+artifacts/
