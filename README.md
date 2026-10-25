@@ -27,6 +27,7 @@ games/
     ├── style.css
     ├── core.js
     ├── audio.js
+    ├── input.js
     ├── game.js
     ├── README.md
     └── tests/
