@@ -1,4 +1,4 @@
-# Tests · v4
+# Tests · v4 keyboard update
 
 ## Dependency-free tests
 
@@ -14,6 +14,8 @@ node --test tests/*.test.js
 - `v4.test.js`: 40 checks for capped objective status, all three refits and payout/capacity agreement, frozen upgrade choices, duplicate actions, isolated tutorial physics and skip/pause, unlocked practice validation, fair stage retries, record eligibility and menu/mode reset.
 - `audio.test.js`: 39 checks for Web Audio initialization, delayed/rejected/interrupted recovery, separate gains, original music scheduling, single-scheduler lifecycle, paused menu behavior, retry cancellation and stale unlock prevention.
 
+- `input.test.js`: 26 checks for deliberate key presses, repeats (including orphan repeat events), release requirements across transitions, focus-loss reset, directional wrapping and main/numeric keypad selection.
+
 Audio tests validate engine scheduling with mocked browser objects, not physical speaker output.
 
 ## Actual-browser harness
@@ -22,9 +24,9 @@ Audio tests validate engine scheduling with mocked browser objects, not physical
 python3 -m http.server 8765 --bind 127.0.0.1
 ```
 
-Open <http://127.0.0.1:8765/tests/browser-harness.html> and click **运行浏览器测试**. Keep the tab foregrounded. The harness uses the real page, inputs, Canvas loop, audio state and overlays. Controlled simulation fixtures reach later states quickly; synthetic pointer capture is stubbed only inside tests. Original storage preferences, unlocks, tutorial flag and record keys are restored afterward.
+Open <http://127.0.0.1:8765/tests/browser-harness.html> (hard-refresh the harness after editing tests) and click **运行浏览器测试**. Keep the tab foregrounded. The harness uses the real page, inputs, Canvas loop, audio state and overlays. Controlled simulation fixtures reach later states quickly; synthetic pointer capture is stubbed only inside tests. Original storage preferences, unlocks, tutorial flag and record keys are restored afterward.
 
-The 60 checks cover normal play and interrupted flows: audio start/pause/resume, separate music/effects controls, touch input, mobile reflow, upgrade freezing and duplicate choices, 7-/3-slot UI agreement, safe tutorial success and skip, precise missing-objective failure text, same-stage retry, full-run record isolation, fresh reset, endless wave 11 and saved practice entries.
+The harness covers normal play and interrupted flows: audio start/pause/resume, separate music/effects controls, touch input, mobile reflow, upgrade freezing and duplicate choices, 7-/3-slot UI agreement, safe tutorial success and skip, precise missing-objective failure text, same-stage retry, full-run record isolation, fresh reset, endless wave 11 and saved practice entries. The keyboard update additionally checks held flight keys on entry, four-direction selection, digit/numpad selection without confirmation, Space non-confirmation, Enter confirmation, no movement/Enter leakage to the next sector or tutorial, keyboard retry, details expansion, native select keys, and Escape closing the audio popup with focus returned to its opener. Synthetic keyboard events test routing; a manual Tab/Shift+Tab pass verifies browser-native focus traversal.
 
 ### Visual QA scenes
 
@@ -33,6 +35,16 @@ The same **test-only** page provides six buttons: desktop/mobile variants of upg
 The optional `browser-qa.py` adds direct `file://` launch and screenshots through Playwright. Output goes to ignored `artifacts/`.
 
 ## Verification (2026-10-25)
+
+### Current keyboard update
+
+- **Passed:** 188/188 Node.js checks, including the new 26 keyboard-state/navigation tests.
+- **Passed:** JavaScript and inline browser-harness syntax checks.
+- **Passed:** final parent-run visible Chromium **76/76** browser regressions, including both Escape/audio-popup focus checks. Native ArrowDown → hauler, 3 → sprinter selection without leaving, and Enter → next sector were manually verified; focus returned to the game canvas.
+- **Passed:** desktop and 375×667 upgrade-menu visual review; no horizontal overflow, vertical scrolling remains usable.
+- **Passed:** parent independently reran **188/188** Node.js checks against the final source. The implementation agent did not launch or control a browser. Native Tab/Shift+Tab traversal and actual dropdown selection remain manual QA steps rather than synthetic-event guarantees.
+
+### Prior v4 baseline
 
 - **Passed:** 162/162 Node.js checks against v4 source.
 - **Passed:** JavaScript syntax checks and Python wrapper syntax.

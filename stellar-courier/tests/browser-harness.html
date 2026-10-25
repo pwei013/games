@@ -15,6 +15,8 @@ document.getElementById('run').onclick=async function(){
   frame.src='../index.html?qa='+Date.now();await new Promise(resolve=>frame.onload=resolve);await delay(150);
   const w=frame.contentWindow,d=w.document,snap=()=>w.StellarCourier.snapshot(),click=id=>d.getElementById(id).click();
   const key=(code,type='keydown',repeat=false,target=d)=>target.dispatchEvent(new w.KeyboardEvent(type,{code,bubbles:true,cancelable:true,repeat}));
+  const tap=(code,target=d.activeElement)=>{key(code,'keydown',false,target);key(code,'keyup',false,d.activeElement);};
+  const chosen=()=>d.querySelector('.upgrade-choice[aria-pressed="true"]');
   async function inject(setup){const step=w.StellarCore.step;let once=false;w.StellarCore.step=function(state,dt,input){if(!once){setup(state);once=true;}step(state,dt,input);};try{await delay(80);}finally{w.StellarCore.step=step;}}
   function delivery(state,cargo){state.hazards.forEach(h=>h.delay=100);state.cargo=cargo;state.deliveryCooldown=0;if(w.StellarCore.has(state,'moving')){state.player.x=state.width*(.5+.29*Math.cos(state.stageElapsed*.4));state.player.y=Math.max(115,Math.min(state.height-48,state.height*(.53+.24*Math.sin(state.stageElapsed*.4))));}else{state.player.x=state.station.x;state.player.y=state.station.y;}}
   function choose(id){const button=d.querySelector('[data-refit="'+id+'"]');assert(!!button,'改装 '+id+' 有明确选择按钮');button.click();button.click();}
@@ -28,15 +30,17 @@ document.getElementById('run').onclick=async function(){
   click('audio-settings-button');assert(!d.getElementById('audio-settings').hidden,'混音菜单可见');
   const notes=snap().audio.notesScheduled;click('test-sound-button');await delay(100);assert(snap().audio.notesScheduled>=notes+3,'试听按钮触发三音提示');
   for(const [type,value]of[['effects',.2],['music',.35]]){const input=d.getElementById(type+'-volume');input.value=value;input.dispatchEvent(new w.Event('input',{bubbles:true}));}
-  assert(snap().audio.effectsVolume===.2&&snap().audio.musicVolume===.35,'两类音量独立调整');click('audio-settings-button');
+  assert(snap().audio.effectsVolume===.2&&snap().audio.musicVolume===.35,'两类音量独立调整');
+  d.getElementById('music-volume').focus();tap('Escape');assert(d.getElementById('audio-settings').hidden&&d.activeElement===d.getElementById('audio-settings-button')&&snap().mode==='playing','滑块聚焦时 Esc 关闭音量并归还焦点，不误暂停');
+  click('audio-settings-button');d.getElementById('test-sound-button').focus();tap('Escape');assert(d.getElementById('audio-settings').hidden&&d.activeElement===d.getElementById('audio-settings-button'),'试听控件关闭后焦点不留在隐藏菜单');
   const x=snap().player.x;key('ArrowRight');await delay(150);key('ArrowRight','keyup');assert(snap().player.x>x+15,'方向键驱动飞船');
   key('KeyP');key('KeyP','keydown',true);const paused=snap();await delay(160);
   assert(snap().mode==='paused'&&snap().timeLeft===paused.timeLeft,'暂停与重复按键不推进时间');
   assert(!snap().audio.musicPlaying&&!snap().audio.schedulerActive&&snap().audio.musicScheduled===paused.audio.musicScheduled,'暂停不再排音乐');
-  const allowed=d.getElementById('start-button').dispatchEvent(new w.KeyboardEvent('keydown',{code:'Space',bubbles:true,cancelable:true}));assert(allowed,'按钮原生空格操作保留');
-  click('start-button');await delay(60);assert(snap().mode==='playing'&&snap().audio.musicPlaying,'继续同时恢复模拟与音乐');
-  key('Space');await delay(30);const cooldown=snap().boostCooldown;key('Space','keydown',true);await delay(30);assert(cooldown>2.2&&snap().boostCooldown<cooldown,'跃迁重复按键不刷新冷却');
-  key('Escape');click('restart-button');click('restart-button');await delay(60);assert(snap().mode==='playing'&&snap().score===0&&snap().level===1&&snap().recordEligible,'暂停重开与重复点击清除旧状态');
+  key('KeyP','keyup');const allowed=key('Space','keydown',false,d.getElementById('start-button'));key('Space','keyup');assert(!allowed&&snap().mode==='playing','按钮空格受控激活一次，不依赖鼠标');
+  await delay(60);assert(snap().mode==='playing'&&snap().audio.musicPlaying,'继续同时恢复模拟与音乐');
+  key('Space');await delay(30);const cooldown=snap().boostCooldown;key('Space','keydown',true);await delay(30);assert(cooldown>2.2&&snap().boostCooldown<cooldown,'跃迁重复按键不刷新冷却');key('Space','keyup');
+  key('Escape');key('Escape','keyup');click('restart-button');click('restart-button');await delay(60);assert(snap().mode==='playing'&&snap().score===0&&snap().level===1&&snap().recordEligible,'暂停重开与重复点击清除旧状态');
   w.dispatchEvent(new w.Event('blur'));await delay(40);assert(snap().mode==='paused'&&!snap().audio.musicPlaying,'失焦暂停游戏及音乐');click('start-button');await delay(50);
   click('sound-button');assert(!snap().audio.enabled&&snap().audio.musicPlaying,'关闭音效不关闭音乐');click('sound-button');
   click('music-button');assert(!snap().audio.musicPlaying&&snap().audio.enabled,'关闭音乐不关闭音效');click('music-button');await delay(50);
@@ -47,18 +51,36 @@ document.getElementById('run').onclick=async function(){
   const beforeResize=snap().timeLeft;await delay(80);assert(snap().timeLeft===beforeResize,'重排不解除暂停');frame.style.width='100%';frame.style.height='900px';await delay(100);click('start-button');await delay(60);
   await inject(state=>{state.score=0;state.combo=0;state.comboTime=0;state.level=1;state.levelCargo=0;delivery(state,1);});assert(snap().score===100&&snap().combo===1,'第一单建立连击');
   await inject(state=>delivery(state,2));assert(snap().score===460&&snap().combo===2,'第二单1.5倍计分');
+  key('Space');key('Enter');key('ArrowRight');await delay(430);
   await inject(state=>{state.health=2;delivery(state,1);});assert(snap().mode==='upgrade'&&snap().level===2&&snap().health===3,'过关进入改装选择而非偷偷继续');
   assert(snap().unlocked===2&&localStorage.getItem('stellar-courier-unlocked-v4')==='2','下一关解锁保存到本地');
   const choiceState=snap();await delay(180);assert(snap().timeLeft===choiceState.timeLeft&&snap().score===choiceState.score&&!snap().audio.musicPlaying,'选择期间不扣时、不重复奖励、音乐停止');
-  choose('hauler');await delay(60);assert(snap().mode==='playing'&&snap().capacity===7&&snap().cooldownMax===2.8,'重载舱选择生效且重复点击不再切换');
+  assert(chosen().dataset.refit==='standard'&&d.activeElement===chosen()&&d.getElementById('upgrade-keyboard-hint').textContent.includes('确认改装'),'改装首选项聚焦，键盘提示明确数字仅选中');
+  for(const code of ['ArrowRight','Space','Enter']){key(code,'keydown',true,d.activeElement);key(code,'keydown',false,d.activeElement);}
+  assert(snap().mode==='upgrade'&&chosen().dataset.refit==='standard','上一关按住方向、空格、Enter 和重复事件均不误选确认');
+  ['ArrowRight','Space','Enter'].forEach(code=>key(code,'keyup',false,d.activeElement));
+  tap('ArrowDown');assert(chosen().dataset.refit==='hauler'&&d.activeElement===chosen(),'向下切换到重载且视觉焦点同步');
+  key('ArrowDown','keydown',false,d.activeElement);key('ArrowDown','keydown',true,d.activeElement);assert(chosen().dataset.refit==='sprinter','方向键长按只移动一项');key('ArrowDown','keyup');
+  tap('ArrowRight');assert(chosen().dataset.refit==='standard','向右可从最后一项循环到首项');
+  tap('ArrowUp');assert(chosen().dataset.refit==='sprinter','向上可从首项循环到末项');
+  tap('ArrowLeft');assert(chosen().dataset.refit==='hauler','向左切换选项');
+  tap('Digit1');tap('Digit3');assert(chosen().dataset.refit==='sprinter'&&snap().mode==='upgrade','1 / 3 数字快捷键只选中，不进入下一关');
+  tap('Numpad2');assert(chosen().dataset.refit==='hauler'&&snap().mode==='upgrade','数字小键盘也可选中');
+  tap('Space');assert(snap().mode==='upgrade','改装卡片空格不会误当确认');
+  key('ArrowLeft','keydown',false,d.activeElement);tap('Digit2');key('Enter','keydown',false,d.activeElement);
+  key('Enter','keydown',true,d.activeElement);key('ArrowLeft','keydown',true,d.activeElement);const nextPosition=snap().player;await delay(90);
+  assert(snap().mode==='playing'&&snap().capacity===7&&snap().cooldownMax===2.8,'Enter 确认重载一次，重复确认不穿透');
+  assert(Math.abs(snap().player.x-nextPosition.x)<1&&snap().boostCooldown===0,'菜单按住方向不穿透下一关，确认不触发冲刺');
+  key('Enter','keyup');key('ArrowLeft','keyup');const releasedX=snap().player.x;key('ArrowLeft');await delay(80);key('ArrowLeft','keyup');assert(snap().player.x<releasedX-5,'松开再按后正常恢复飞行');
   assert(d.getElementById('cargo-capacity').textContent==='7'&&d.getElementById('cargo-slots').children.length===7,'7格货舱UI与逻辑一致');
   await inject(state=>{state.powerups=[{x:state.player.x,y:state.player.y,r:15,type:'magnet',ttl:10}];});assert(snap().magnetTime>7&&d.getElementById('power-status').textContent.includes('磁吸'),'磁吸道具仍生效');
   await inject(state=>{state.powerups=[{x:state.player.x,y:state.player.y,r:15,type:'shield',ttl:10}];});assert(snap().shieldTime>5,'护盾道具仍生效');
   await inject(state=>{state.powerups=[{x:state.player.x,y:state.player.y,r:15,type:'slow',ttl:10}];});assert(snap().slowTime>5,'时缓道具仍生效');
   await inject(state=>{state.levelCargo=0;state.combo=0;state.comboTime=0;delivery(state,7);});assert(snap().mode==='upgrade'&&snap().level===3,'7箱投递正确进入第三关准备');
-  choose('sprinter');await delay(60);assert(snap().mode==='tutorial'&&snap().capacity===3&&snap().cooldownMax===1.35,'快冲3格生效，首次第三关进入安全练习');
+  tap('Digit3');key('Enter','keydown',false,d.activeElement);key('Enter','keydown',true,d.activeElement);await delay(60);assert(snap().mode==='tutorial'&&snap().capacity===3&&snap().cooldownMax===1.35,'快冲3格生效，首次第三关进入安全练习');
+  assert(snap().tutorial.x===52&&!snap().tutorial.success,'确认进入练习的 Enter 不穿透触发练习完成');key('Enter','keyup');
   const tutorialStart=snap();await delay(160);assert(snap().timeLeft===tutorialStart.timeLeft&&snap().score===tutorialStart.score&&snap().health===tutorialStart.health&&!snap().audio.musicPlaying,'练习不扣正式时间、分数、护盾且无BGM');
-  key('KeyP');assert(snap().mode==='paused','练习可暂停');click('start-button');await delay(30);assert(snap().mode==='tutorial'&&!snap().audio.musicPlaying,'继续练习不会错误开启BGM');
+  key('KeyP');key('KeyP','keyup');assert(snap().mode==='paused','练习可暂停');click('start-button');await delay(30);assert(snap().mode==='tutorial'&&!snap().audio.musicPlaying,'继续练习不会错误开启BGM');
   click('tutorial-boost');await delay(450);assert(snap().tutorial.success&&snap().levelSmashes===0&&snap().score===tutorialStart.score,'练习实际击碎目标且不混入正式计数');
   click('tutorial-finish');click('tutorial-finish');await delay(60);assert(snap().mode==='playing'&&snap().audio.musicPlaying&&localStorage.getItem('stellar-courier-tutorial-v4')==='seen','完成练习只进入本关一次并保存已看提示');
   await inject(state=>{state.hazards.forEach(h=>h.delay=100);state.levelCargo=20;state.levelSmashes=1;state.cargo=0;state.stageElapsed=0;});
@@ -66,7 +88,7 @@ document.getElementById('run').onclick=async function(){
   assert(d.getElementById('smash-goal').textContent.includes('1/3')&&d.getElementById('flight-tip').textContent.includes('还差 2'),'碎石独立显示且明确还差2颗');
   await inject(state=>{state.stageElapsed=64.99;});assert(snap().mode==='over'&&d.getElementById('overlay-description').textContent.includes('还差 2 颗'),'失败摘要正确指出缺失碎石目标');
   assert(localStorage.getItem('stellar-courier-best-v4-campaign')===null,'未完整通关不写严格全程纪录');
-  click('retry-button');click('retry-button');await delay(60);assert(snap().mode==='playing'&&snap().level===3&&snap().refit==='sprinter'&&snap().health===3&&snap().score===0&&snap().levelCargo===0&&snap().levelSmashes===0&&snap().timeLeft>64&&!snap().recordEligible,'重试满盾满时、目标归零、保留改装、不计正式纪录');
+  assert(d.activeElement===d.getElementById('retry-button'),'失败时键盘焦点落在本关重试而非全程重开');key('Enter','keydown',false,d.activeElement);key('Enter','keydown',true,d.activeElement);key('Enter','keyup');await delay(60);assert(snap().mode==='playing'&&snap().level===3&&snap().refit==='sprinter'&&snap().health===3&&snap().score===0&&snap().levelCargo===0&&snap().levelSmashes===0&&snap().timeLeft>64&&!snap().recordEligible,'重试满盾满时、目标归零、保留改装、不计正式纪录');
   await inject(state=>{state.level=10;state.levelCargo=11;state.stageElapsed=0;state.combo=0;state.comboTime=0;delivery(state,1);});assert(snap().mode==='over'&&d.getElementById('overlay-title').textContent.includes('十关通关'),'重试路线可以完成最终关');
   assert(localStorage.getItem('stellar-courier-best-v4-campaign')===null&&d.getElementById('result-detail').textContent.includes('不计正式'),'重试通关不会污染全程纪录');
   click('start-button');await delay(50);assert(snap().level===1&&snap().capacity===5&&snap().recordEligible,'重新全程清除改装与练习标记');
@@ -81,10 +103,13 @@ document.getElementById('run').onclick=async function(){
   frame.src='../index.html?profile='+Date.now();await new Promise(resolve=>frame.onload=resolve);await delay(100);
   const w2=frame.contentWindow,d2=w2.document,read=()=>w2.StellarCourier.snapshot();
   assert(read().unlocked===3&&d2.getElementById('practice-level').options.length===3,'刷新后只展示本地已解锁关卡');
-  d2.getElementById('practice-summary').click();d2.getElementById('practice-level').value='3';d2.getElementById('practice-button').click();await delay(40);
+  const key2=(code,type='keydown',target=d2.activeElement,repeat=false)=>target.dispatchEvent(new w2.KeyboardEvent(type,{code,bubbles:true,cancelable:true,repeat}));
+  d2.getElementById('practice-summary').focus();key2('Enter');key2('Enter','keyup');assert(d2.getElementById('practice-panel').open&&read().mode==='ready','Enter 展开练习列表，不误启动全程');
+  const select=d2.getElementById('practice-level');select.focus();assert(key2('ArrowDown')&&key2('Enter')&&read().mode==='ready','关卡下拉框保留原生方向/确认按键');key2('ArrowDown','keyup');key2('Enter','keyup');select.value='3';
+  d2.getElementById('practice-button').focus();key2('Enter');key2('Enter','keydown',d2.activeElement,true);key2('Enter','keyup');await delay(40);
   assert(read().mode==='tutorial'&&read().origin==='practice'&&!read().recordEligible,'已解锁第三关练习入口正确，首次提示可再次验证');
-  const skipped=read();d2.getElementById('tutorial-skip').click();d2.getElementById('tutorial-skip').click();await delay(50);
-  assert(read().mode==='playing'&&read().level===3&&read().score===0&&read().levelSmashes===0&&read().timeLeft>64,'跳过练习不加分、不碎石、不消耗本关额度');
+  const skipped=read();d2.getElementById('tutorial-skip').focus();key2('Enter');key2('Enter','keydown',d2.activeElement,true);key2('Enter','keyup');await delay(50);
+  assert(read().mode==='playing'&&read().level===3&&read().score===0&&read().levelSmashes===0&&read().timeLeft>64,'键盘跳过练习只进入一次，不加分、不碎石、不消耗本关额度');
   w2.dispatchEvent(new w2.Event('blur'));d2.getElementById('menu-button').click();assert(read().mode==='ready'&&!read().audio.schedulerActive,'练习结束返回菜单保持静默');
  }catch(error){if(!failures){const li=document.createElement('li');li.className='fail';li.textContent='✗ '+error.message;results.appendChild(li);failures++;}console.error(error);}
  finally{for(const[key,value]of savedStorage){if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);}frame.src='../index.html';}
@@ -110,7 +135,7 @@ async function showScene(scene,mobile){
   if(scene!=='upgrade'){d.querySelector('[data-refit="standard"]').click();await delay(60);}
   if(scene==='failure'){d.getElementById('tutorial-skip').click();await delay(30);await fixture(state=>{state.hazards.forEach(h=>h.delay=100);state.levelCargo=6;state.levelSmashes=1;state.stageElapsed=64.99;});}
   document.getElementById('summary').textContent='QA 场景：'+(mobile?'375 × 667 手机':'桌面')+' / '+{upgrade:'改装选择',tutorial:'免扣时练习',failure:'目标缺项失败'}[scene];
-  frame.scrollIntoView({block:'start'});
+  frame.scrollIntoView({block:'start'});if(scene==='upgrade')d.querySelector('.upgrade-choice[aria-pressed="true"]').focus({preventScroll:true});
  }finally{restoreSceneStorage();buttons.forEach(b=>b.disabled=false);}
 }
 for(const mobile of [false,true])for(const scene of ['upgrade','tutorial','failure']){
