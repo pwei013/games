@@ -11,6 +11,8 @@
   const touchDevice = window.matchMedia('(pointer: coarse)').matches;
   if (touchDevice) $('start-hint').textContent = '拖动航道控制飞船 · 点击跃迁按钮避险';
   const keys = new Set();
+  const keyboard = window.StellarInput.create();
+  let upgradeIndex = 0;
   let pointer = null, particles = [], floats = [], stars = [], screenShake = 0, flashTime = 0;
   let previous = 0, visualTime = 0, toastUntil = 0, hudCache = '', lastSecond = 90;
   let unlocked=1,tutorialSeen=false,best=0,soundEnabled=true,musicEnabled=true,effectsVolume=.75,musicVolume=.42,selectedMode='campaign',pixelRatio=1;
@@ -63,7 +65,7 @@
   }
   function savePreference(key,value){try{localStorage.setItem(key,String(value));}catch(_){}}
   function toggleMusic(){musicEnabled=!musicEnabled;audio.setMusicEnabled(musicEnabled);savePreference('stellar-courier-music-v3',musicEnabled?'on':'off');updateSoundButton();}
-  function closeAudioSettings(){$('audio-settings').hidden=true;$('audio-settings-button').setAttribute('aria-expanded','false');}
+  function closeAudioSettings(restoreFocus){$('audio-settings').hidden=true;$('audio-settings-button').setAttribute('aria-expanded','false');if(restoreFocus)$('audio-settings-button').focus({preventScroll:true});}
   function selectMode(mode){
     if(!['ready','over'].includes(game.mode))return;
     selectedMode=mode==='endless'?'endless':'campaign';savePreference('stellar-courier-mode-v3',selectedMode);
@@ -88,7 +90,7 @@
     stars = Array.from({length:Math.round(rect.width*rect.height/2500)},() => ({x:rng()*rect.width,y:rng()*rect.height,r:.4+rng()*1.15,a:.15+rng()*.55,phase:rng()*6.28}));
   }
   function seededVisual(seed) { return function () { seed = (seed * 16807) % 2147483647; return (seed-1)/2147483646; }; }
-  function clearInput() { keys.clear(); pointer = null; }
+  function clearInput() { keys.clear(); pointer = null; keyboard.boundary(); }
   function updatePracticeOptions(){
     const previous=Number($('practice-level').value)||1;
     $('practice-level').innerHTML=Core.LEVELS.slice(0,unlocked).map((level,i)=>'<option value="'+(i+1)+'">'+(i+1)+' · '+level.name+'</option>').join('');
@@ -135,8 +137,8 @@
     $('restart-button').hidden=true;$('menu-button').hidden=true;$('mode-picker').hidden=false;
     $('overlay-kicker').textContent='READY FOR TAKEOFF';$('overlay-title').textContent='银河远征，现在启航。';
     $('start-label').textContent='开始正式挑战';$('start-button').classList.remove('secondary-start');
-    $('start-hint').textContent='方向键 / WASD 移动 · 空格冲刺 · Enter 出发';
-    $('pause-button').disabled=true;selectMode(selectedMode);updatePracticeOptions();updateHUD();
+    $('start-hint').textContent='方向键 / WASD 移动 · 空格冲刺 · Enter 出发 · Tab 选择练习';
+    $('pause-button').disabled=true;selectMode(selectedMode);updatePracticeOptions();updateHUD();$('start-button').focus({preventScroll:true});
   }
   function setPaused(shouldPause){
     if(shouldPause&&['playing','tutorial'].includes(game.mode)){
@@ -146,24 +148,42 @@
     updateHUD();
   }
   function refitInfo(){return Core.REFITS.find(r=>r.id===game.refit)||Core.REFITS[0];}
+  function selectUpgrade(index,focus){
+    const choices=Array.from($('upgrade-options').querySelectorAll('button'));
+    if(game.mode!=='upgrade'||!choices[index])return;
+    upgradeIndex=index;
+    choices.forEach((button,i)=>{
+      button.classList.toggle('is-selected',i===index);
+      button.setAttribute('aria-pressed',String(i===index));
+      button.tabIndex=i===index?0:-1;
+    });
+    if(focus)choices[index].focus({preventScroll:true});
+  }
+  function confirmUpgrade(id){
+    if(!Core.chooseUpgrade(game,id||Core.REFITS[upgradeIndex].id))return;
+    processEvents();activateState(false);sound('powerup');
+  }
   function showFlow(){
-    $('overlay').hidden=true;$('flow-overlay').hidden=false;audio.musicPause();closeAudioSettings();
-    const tutorial=game.mode==='tutorial';$('tutorial-panel').hidden=!tutorial;$('upgrade-options').hidden=tutorial;
+    clearInput();$('overlay').hidden=true;$('flow-overlay').hidden=false;audio.musicPause();closeAudioSettings();
+    const tutorial=game.mode==='tutorial';$('tutorial-panel').hidden=!tutorial;$('upgrade-options').hidden=tutorial;$('upgrade-keyboard-hint').hidden=tutorial;
     $('flow-kicker').textContent=tutorial?'SAFE FLIGHT SCHOOL':'ONE RUN. ONE BUILD.';
     $('flow-title').textContent=tutorial?'先试一次，不扣时间。':'过关！选择下一关改装';
-    $('flow-description').textContent=tutorial?'方向键移动，空格冲刺击碎练习石。不扣盾、不计分；可随时跳过。':'三选一，替换当前改装；仅本局生效。下一站：'+Core.levelConfig(game).name;
+    $('flow-description').textContent=tutorial?'方向键移动，空格冲刺击碎练习石。不扣盾、不计分；Tab 可选跳过，Enter 确认。':'三选一，替换当前改装；仅本局生效。下一站：'+Core.levelConfig(game).name;
     if(!tutorial){
-      $('upgrade-options').innerHTML=Core.REFITS.map(r=>'<button type="button" class="upgrade-choice" data-refit="'+r.id+'"><strong>'+r.name+(r.id===game.refit?' · 当前':'')+'</strong><span>'+r.capacity+' 格货舱 · 冲刺 '+r.cooldown+' 秒</span><small>'+r.description+'</small></button>').join('');
-      $('upgrade-options').querySelectorAll('button').forEach(button=>button.addEventListener('click',function(){
-        if(!Core.chooseUpgrade(game,this.dataset.refit))return;
-        processEvents();activateState(false);sound('powerup');
-      }));
-      $('upgrade-options').querySelector('button').focus({preventScroll:true});
+      $('upgrade-options').innerHTML=Core.REFITS.map((r,i)=>'<button type="button" class="upgrade-choice" data-refit="'+r.id+'" aria-pressed="false" aria-describedby="upgrade-keyboard-hint"><kbd aria-hidden="true">'+(i+1)+'</kbd><strong>'+r.name+(r.id===game.refit?' · 当前':'')+'</strong><span>'+r.capacity+' 格货舱 · 冲刺 '+r.cooldown+' 秒</span><small>'+r.description+'</small></button>').join('');
+      $('upgrade-options').querySelectorAll('button').forEach((button,i)=>{
+        button.addEventListener('focus',()=>selectUpgrade(i,false));
+        button.addEventListener('click',()=>confirmUpgrade(button.dataset.refit));
+      });
+      selectUpgrade(Math.max(0,Core.REFITS.findIndex(r=>r.id===game.refit)),true);
+      announce('过关！方向键或数字 1、2、3 选中改装，Enter 确认。请先松开上一关按键。');
     }else{$('tutorial-canvas').focus({preventScroll:true});syncTutorialUI();}
   }
   function syncTutorialUI(){
     const success=!!(game.tutorial&&game.tutorial.success);
+    const focusedBoost=document.activeElement===$('tutorial-boost');
     $('tutorial-boost').hidden=success;$('tutorial-finish').hidden=!success;
+    if(success&&focusedBoost){clearInput();$('tutorial-finish').focus({preventScroll:true});}
     $('tutorial-status').textContent=success?'击碎成功！练习不计入正式碎石目标。':'默认朝右，按空格或下方按钮冲刺';
     $('tutorial-skip').textContent=success?'直接进入本关':'跳过练习，直接开始';
   }
@@ -178,14 +198,14 @@
     return parts.join('；');
   }
   function showOverlay(kind){
-    const over=kind==='over';$('flow-overlay').hidden=true;$('overlay').hidden=false;$('overlay').className='overlay '+(over?'game-over':'paused');
+    clearInput();const over=kind==='over';$('flow-overlay').hidden=true;$('overlay').hidden=false;$('overlay').className='overlay '+(over?'game-over':'paused');
     $('mode-picker').hidden=true;$('practice-panel').hidden=true;
     $('result-stats').hidden=!over;$('result-detail').hidden=!over;$('restart-button').hidden=over;$('menu-button').hidden=false;
     $('retry-button').hidden=!over||game.reason==='victory';$('start-button').classList.toggle('secondary-start',over&&game.reason!=='victory');
     if(!over){
       $('overlay-kicker').textContent='TAKE A LITTLE BREAK';$('overlay-title').textContent='宇宙可以等一等。';
       $('overlay-description').textContent=game.pausedFrom==='tutorial'?'练习已暂停，正式关卡时间没有流逝。':'航程已暂停，货物与目标进度保持不变。';
-      $('start-label').textContent='继续';$('start-hint').textContent='P / Esc 继续 · 返回菜单会放弃本次挑战';
+      $('start-label').textContent='继续';$('start-hint').textContent='Enter / P / Esc 继续 · Tab 切换操作';
     }else{
       const eligible=game.recordEligible&&(game.runMode==='endless'||game.reason==='victory');
       const isRecord=eligible&&game.score>best;
@@ -197,7 +217,7 @@
       $('result-detail').textContent=(eligible?'正式纪录合格':game.recordEligible?'未完整通关，不写全程纪录':'练习 / 重试不计正式纪录')+' · '+refitInfo().name;
       $('retry-button').textContent='重试本'+(game.runMode==='endless'?'波':'关')+' · 满盾满时';
       $('start-label').textContent='从第一'+(selectedMode==='endless'?'波':'关')+'重新正式挑战';
-      $('start-hint').textContent=game.reason==='victory'?'可重开全程或选择已解锁关卡练习':'重试会清零本段分数、目标与连单；保留改装';
+      $('start-hint').textContent=game.reason==='victory'?'Enter 重开全程 · Tab 选择返回菜单 / 练习':'Enter 重试本关 · Tab 切换操作；目标与分数归零，保留改装';
       $('pause-button').disabled=true;updatePracticeOptions();
       announce('本次结束。'+missingText()+'。可重试本关或重新挑战。');
     }
@@ -307,25 +327,50 @@
   }
   function boost(){audioInit();const teaching=game.mode==='tutorial';const fired=Core.boost(game);if(teaching&&fired)sound('boost');processEvents();updateHUD();}
   const movementKeys = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyW','KeyA','KeyS','KeyD'];
+  function textControl(target){return /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)||target.isContentEditable;}
   document.addEventListener('keydown',function (e) {
-    if (e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-    if (movementKeys.includes(e.code)) { if(['playing','tutorial'].includes(game.mode)){e.preventDefault();keys.add(e.code);} return; }
+    // Physical key state survives scene changes; a held key must be released first.
+    const press=keyboard.keydown(e.code,e.repeat);
+    if(e.ctrlKey||e.metaKey||e.altKey)return;
+    if(e.code==='Escape'&&!$('audio-settings').hidden){e.preventDefault();if(press==='fresh')closeAudioSettings(true);return;}
+    if(textControl(e.target))return;
+    if(game.mode==='upgrade'){
+      const index=window.StellarInput.choiceIndex(e.code,upgradeIndex,Core.REFITS.length);
+      if(index!==null){e.preventDefault();if(press==='fresh')selectUpgrade(index,true);return;}
+      if(e.code==='Enter'&&(e.target.closest?.('.upgrade-choice')||e.target===document||e.target===document.body||e.target===canvas)){
+        e.preventDefault();if(press==='fresh')confirmUpgrade();return;
+      }
+      // Space is a flight action, not a confirmation shortcut on refit cards.
+      if(e.code==='Space'&&e.target.closest?.('.upgrade-choice')){e.preventDefault();return;}
+    }
+    if((e.code==='Enter'||e.code==='Space')&&/^(BUTTON|SUMMARY)$/.test(e.target.tagName)){
+      // One deliberate activation, including retry, practice and details controls.
+      // Prevent native keyup/repeat clicks from following focus into a new scene.
+      e.preventDefault();if(press==='fresh'&&!e.target.disabled)e.target.click();return;
+    }
+    if (movementKeys.includes(e.code)) {
+      if(['playing','tutorial'].includes(game.mode)){e.preventDefault();if(press!=='blocked')keys.add(e.code);}return;
+    }
     if (['Space','KeyP','Escape','KeyM','Enter'].includes(e.code)) {
-      // Preserve native keyboard activation for focused controls.
-      if(e.code==='Escape'&&!$('audio-settings').hidden){e.preventDefault();closeAudioSettings();return;}
-      if (e.code === 'Space' && e.target.tagName === 'BUTTON') return;
-      if (e.code === 'Enter' && e.target.tagName === 'BUTTON' && e.target !== $('start-button')) return;
-      if (e.code !== 'KeyM' || !e.repeat) e.preventDefault();
-      if (e.repeat) return;
-      if (e.code === 'Space') { if(['playing','tutorial'].includes(game.mode))boost(); }
-      else if (e.code === 'KeyP' || e.code === 'Escape') setPaused(['playing','tutorial'].includes(game.mode));
-      else if (e.code === 'KeyM') toggleSound();
-      else if (e.code === 'Enter') { if (game.mode === 'ready' || game.mode === 'over') begin(); else if(game.mode==='paused')setPaused(false);else if(game.mode==='tutorial'){if(game.tutorial.success)leaveTutorial(false);else boost();} }
+      e.preventDefault();if(press!=='fresh')return;
+      if (e.code==='Space') {if(['playing','tutorial'].includes(game.mode))boost();}
+      else if(e.code==='KeyP'||e.code==='Escape')setPaused(['playing','tutorial'].includes(game.mode));
+      else if(e.code==='KeyM')toggleSound();
+      else if(e.code==='Enter'){
+        if(game.mode==='ready')begin();
+        else if(game.mode==='over'){if(game.reason==='victory')begin();else retryCurrent();}
+        else if(game.mode==='paused')setPaused(false);
+        else if(game.mode==='tutorial'){if(game.tutorial.success)leaveTutorial(false);else boost();}
+      }
     }
   });
-  document.addEventListener('keyup', e => keys.delete(e.code));
-  window.addEventListener('blur',function () { clearInput(); if(['playing','tutorial'].includes(game.mode))setPaused(true); });
-  document.addEventListener('visibilitychange',function () { if (document.hidden) { clearInput(); if(['playing','tutorial'].includes(game.mode))setPaused(true); } });
+  document.addEventListener('keyup',function(e){
+    keys.delete(e.code);keyboard.keyup(e.code);
+    if(e.code==='Space'&&!textControl(e.target))e.preventDefault();
+  });
+  function loseFocus(){clearInput();keyboard.reset();if(['playing','tutorial'].includes(game.mode))setPaused(true);}
+  window.addEventListener('blur',loseFocus);
+  document.addEventListener('visibilitychange',function(){if(document.hidden)loseFocus();});
   function pointFromEvent(e) { const r = canvas.getBoundingClientRect(); return {x:(e.clientX-r.left)*game.width/r.width,y:(e.clientY-r.top)*game.height/r.height,id:e.pointerId}; }
   canvas.addEventListener('pointerdown',function (e) {
     if (game.mode !== 'playing' || pointer || e.button > 0) return;

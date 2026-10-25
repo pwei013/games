@@ -7,7 +7,7 @@
   <meta name="description" content="星际快递：一款免费、离线、零依赖的太空街机小游戏。收集货箱，躲开陨石，让好东西抵达远方。">
   <title>星际快递：银河远征 · Stellar Courier</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='25' fill='%23080e1c'/%3E%3Cpath d='M25 74 50 17 75 74 50 61Z' fill='%2387f4d6'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=4-keyboard-2">
 </head>
 <body>
   <div class="page-shell">
@@ -48,13 +48,14 @@
                 <button class="primary-button" id="start-button" type="button"><span id="start-label">开始接单</span><span class="arrow-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></span></button>
                 <button class="text-button" id="restart-button" type="button" hidden>从第一关重新挑战</button><button class="text-button" id="menu-button" type="button" hidden>返回菜单</button>
                 <details id="practice-panel" class="practice-panel"><summary id="practice-summary">关卡练习 · 已解锁 1 / 10</summary><div><select id="practice-level" aria-label="选择已解锁关卡"><option value="1">1 · 启航港</option></select><button id="practice-button" type="button">进入练习</button></div><small>独立练习不写入全程通关纪录</small></details>
-                <p class="start-hint" id="start-hint">方向键 / WASD 移动 · 空格冲刺 · Enter 出发</p>
+                <p class="start-hint" id="start-hint">方向键 / WASD 移动 · 空格冲刺 · Enter 出发 · Tab 选择练习</p>
               </div>
             </div>
             <div class="overlay flow-overlay" id="flow-overlay" hidden>
               <div class="flow-card">
                 <p class="eyebrow" id="flow-kicker">PIT STOP</p><h2 id="flow-title">本关完成，选择改装</h2><p id="flow-description"></p>
-                <div id="upgrade-options" class="upgrade-options"></div>
+                <p id="upgrade-keyboard-hint" class="upgrade-keyboard-hint"><span>方向键切换 · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> 选中</span><strong><kbd>Enter</kbd> 确认改装</strong><small>先松开飞行按键 · 鼠标单击也可确认</small></p>
+                <div id="upgrade-options" class="upgrade-options" role="group" aria-label="选择临时改装"></div>
                 <div id="tutorial-panel" hidden><canvas id="tutorial-canvas" width="320" height="120" tabindex="0" aria-label="不扣时的冲刺练习，方向键移动，空格击碎练习石"></canvas><p id="tutorial-status">空格冲刺，击碎右侧练习石</p><button id="tutorial-boost" class="primary-button" type="button">试一次冲刺 · Space</button><button id="tutorial-finish" class="primary-button" type="button" hidden>练习完成，开始本关</button><button id="tutorial-skip" class="text-button" type="button">跳过练习，直接开始</button></div>
                 <button id="flow-menu" class="text-button" type="button">返回菜单</button>
               </div>
@@ -82,8 +83,9 @@
       <noscript><p class="noscript">请开启浏览器的 JavaScript，才能开始星际旅程。</p></noscript>
     </main>
   </div>
-  <script src="core.js"></script>
-  <script src="audio.js"></script>
-  <script src="game.js"></script>
+  <script src="core.js?v=4-keyboard-2"></script>
+  <script src="audio.js?v=4-keyboard-2"></script>
+  <script src="input.js?v=4-keyboard-2"></script>
+  <script src="game.js?v=4-keyboard-2"></script>
 </body>
 </html>
